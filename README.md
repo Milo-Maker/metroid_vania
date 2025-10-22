@@ -1,10 +1,14 @@
-# Installer pip
-# Installer les requirements :
-``` pip install -r requirements ```
+## Installer pip
+## Installer les requirements :
+``` 
+pip install -r requirements 
+```
 
-# Lancer le jeu
-``` python main.py ```
+## Lancer le jeu
+``` 
+python main.py 
+```
 
-# Commandes :
+## Commandes :
 - Touches de direction
 - Barre espace pour dash

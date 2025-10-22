@@ -17,7 +17,7 @@ xcam = 0
 ycam = 0
 gravité = 1
                
-
+# TODO : Corriger le bug qui permet de sauter avec le dash sans toucher le sol.
          
 group = None
 plat_collision = []
@@ -88,6 +88,8 @@ while execution:
         joueur1.vy += gravité
         
 # collision et mouvement
+
+#FIXME debuger le changement de zones pour ne pas e coincer
         joueur1.mouvementy(plat_collision)
     joueur1.mouvementx(plat_collision)
     if joueur1.x < 0:
@@ -125,8 +127,8 @@ while execution:
     ecran.fill(fond_ecran)
     group.draw(ecran)
     #debug affichage hitbox des plateformes
-    for r in plat_collision:
-       pygame.draw.rect(ecran, (255, 0, 0), (r.x - xcam, r.y - ycam, r.width, r.height), 2)
+    # for r in plat_collision:
+    #    pygame.draw.rect(ecran, (255, 0, 0), (r.x - xcam, r.y - ycam, r.width, r.height), 2)
     
     joueur1.draw(xcam, ycam, resolution, resolution_base)
     ecran.blit(img, (20, 20))

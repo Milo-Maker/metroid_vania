@@ -4,3 +4,4 @@
 # Ne pas commiter le répertoire / fichiers Tiled
 tiled/
 *.tsx
+__pycache__/

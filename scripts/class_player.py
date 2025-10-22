@@ -51,8 +51,8 @@ class joueur(pygame.sprite.Sprite):
         screen_y = (self.y - ycam) * scale_y
         
         #debug affichage hitbox
-        screen_l, screen_h = self.l * scale_x, self.h * scale_y
-        pygame.draw.rect(self.screen, (0, 0, 255), (screen_x, screen_y, screen_l, screen_h), 2)
+        # screen_l, screen_h = self.l * scale_x, self.h * scale_y
+        # pygame.draw.rect(self.screen, (0, 0, 255), (screen_x, screen_y, screen_l, screen_h), 2)
 
         if self.direction == -1:
             if self.animation_etat == 0:
