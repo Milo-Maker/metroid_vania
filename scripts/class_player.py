@@ -26,13 +26,13 @@ class joueur(pygame.sprite.Sprite):
         self.animation_counter = 0
         self.animation_etat = 0 # 0=idle 1=walk 2=dash 2=jump 3=attack
         for i in range(20):
-            self.animation_idle.append(pygame.transform.scale(pygame.image.load(f"img/joueur/Idle/{i}.png").convert_alpha(), (300,300)))
+            self.animation_idle.append(pygame.transform.scale(pygame.image.load(f"../img/joueur/Idle/{i}.png").convert_alpha(), (300,300)))
         for i in range(20):
-            self.animation_walk.append(pygame.transform.scale(pygame.image.load(f"img/joueur/Walk/{i}.png").convert_alpha(), (300,300)))
+            self.animation_walk.append(pygame.transform.scale(pygame.image.load(f"../img/joueur/Walk/{i}.png").convert_alpha(), (300,300)))
         for i in range(8):
-            self.animation_jump.append(pygame.transform.scale(pygame.image.load(f"img/joueur/Jump/{i}.png").convert_alpha(), (300,300)))
+            self.animation_jump.append(pygame.transform.scale(pygame.image.load(f"../img/joueur/Jump/{i}.png").convert_alpha(), (300,300)))
         for i in range(16):
-            self.animation_dash.append(pygame.transform.scale(pygame.image.load(f"img/joueur/Dash/{i}.png").convert_alpha(), (300,300)))         
+            self.animation_dash.append(pygame.transform.scale(pygame.image.load(f"../img/joueur/Dash/{i}.png").convert_alpha(), (300,300)))         
     
     def draw(self, xcam, ycam, resolution, resolution_base):
 

@@ -8,7 +8,7 @@ ecran = pygame.display.set_mode(resolution)
 pygame.display.set_caption("jeu metroidvania")
 clock = pygame.time.Clock()
 execution = True
-img = pygame.image.load("img/dash_icon.png").convert_alpha()
+img = pygame.image.load("../img/dash_icon.png").convert_alpha()
 img = pygame.transform.scale(img, (100 * resolution[0]/resolution_base[0], 100 * resolution[1]/resolution_base[1]))
 fond_ecran = (0,110,110)
 couche = 1
@@ -23,7 +23,7 @@ group = None
 plat_collision = []
 def charge_zone():
     global group, plat_collision
-    tmx_data = pytmx.load_pygame(f"map/couche1/zone{zone}.tmx")
+    tmx_data = pytmx.load_pygame(f"../map/couche1/zone{zone}.tmx")
     map_data = pyscroll.data.TiledMapData(tmx_data)
     map_layer = pyscroll.orthographic.BufferedRenderer(map_data, resolution, alpha=True)
     group = pyscroll.PyscrollGroup(map_layer=map_layer, default_layer=1)
