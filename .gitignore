@@ -1,0 +1,6 @@
+# Ne pas commiter le répertoire d'historique local
+.history/
+.working-*/
+# Ne pas commiter le répertoire / fichiers Tiled
+tiled/
+*.tsx
