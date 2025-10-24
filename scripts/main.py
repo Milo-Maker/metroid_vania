@@ -2,14 +2,21 @@ import pygame
 import pytmx
 import pyscroll
 from class_player import joueur
+from class_collectible import collectible
+debug_mod_is_eanable=False
 resolution = (2560, 1440)
 resolution_base = (2560, 1440)  
 ecran = pygame.display.set_mode(resolution)
 pygame.display.set_caption("jeu metroidvania")
 clock = pygame.time.Clock()
 execution = True
-img = pygame.image.load("../img/dash_icon.png").convert_alpha()
-img = pygame.transform.scale(img, (100 * resolution[0]/resolution_base[0], 100 * resolution[1]/resolution_base[1]))
+# chargement des images : 
+
+icon_dash = pygame.transform.scale(pygame.image.load("img/dash_icon.png").convert_alpha(), (100 * resolution[0]/resolution_base[0], 100 * resolution[1]/resolution_base[1]))
+icon_money = pygame.transform.scale(pygame.image.load("img/argent_icon.png").convert_alpha(), (100 * resolution[0]/resolution_base[0], 100 * resolution[1]/resolution_base[1]))
+icon_interdiction = pygame.transform.scale(pygame.image.load("img/interdiction.png").convert_alpha(), (110 * resolution[0]/resolution_base[0], 110 * resolution[1]/resolution_base[1]))
+cash_bag = pygame.transform.scale(pygame.image.load("img/cash_bag.png").convert_alpha(), (100 * resolution[0]/resolution_base[0], 100 * resolution[1]/resolution_base[1]))
+
 fond_ecran = (0,110,110)
 couche = 1
 zone = 2
@@ -21,27 +28,93 @@ gravité = 1
          
 group = None
 plat_collision = []
-def charge_zone():
+items = []
+items_recovered= []
+def charge_zone(zone, couche):
     global group, plat_collision
-    tmx_data = pytmx.load_pygame(f"../map/couche1/zone{zone}.tmx")
+    tmx_data = pytmx.load_pygame(f"map/couche{couche}/zone{zone}.tmx")
     map_data = pyscroll.data.TiledMapData(tmx_data)
     map_layer = pyscroll.orthographic.BufferedRenderer(map_data, resolution, alpha=True)
     group = pyscroll.PyscrollGroup(map_layer=map_layer, default_layer=1)
     plat_collision.clear()
+    items.clear()
+
+    # Récupérer TOUS les colliders d'un coup
+    all_colliders = {}
+    for gid, colliders in tmx_data.get_tile_colliders():
+        all_colliders[gid] = colliders
+    # Parcourir les layers pour placer les colliders aux bonnes positions
+    for layer in tmx_data.visible_layers:
+        if isinstance(layer, pytmx.TiledTileLayer):
+            for x, y, gid in layer:
+                if gid == 0:
+                    continue
+
+                # Vérifier si ce GID a des colliders
+                if gid in all_colliders:
+                    for collision_obj in all_colliders[gid]:
+                        # Calculer la position absolue du rectangle de collision
+                        abs_rect = pygame.Rect(
+                            x * tmx_data.tilewidth + collision_obj.x,
+                            y * tmx_data.tileheight + collision_obj.y,
+                            collision_obj.width,
+                            collision_obj.height
+                        )
+                        plat_collision.append(abs_rect)
+
+
     for obj in tmx_data.objects:
-        if obj.type == "collision":
-            plat = pygame.Rect(obj.x, obj.y, obj.width, obj.height)
-            plat_collision.append(plat)
+        if obj.type == "cash_bag":
+            if not obj.number in items_recovered:
+                items.append(collectible("cash_bag", obj.x, obj.y, cash_bag, ecran, obj.number, obj.quantity, debug_mod_is_eanable))         
+def changement_zone(xcam, ycam, zone, couche):
+    if joueur1.x < 0:
+        zone -= 1
+        joueur1.x = 6400 - joueur1.l
+        xcam = 6400 - resolution[0]
+        charge_zone(zone, couche)
+        
+                
+    elif joueur1.x + joueur1.l > 6400:
+        zone += 1
+        joueur1.x = 0
+        xcam = 0
+        charge_zone(zone, couche)
+
+    return xcam, ycam, zone, couche
+def draw():
+    ecran.fill(fond_ecran)
+    group.draw(ecran)
+    #debug affichage hitbox des plateformes
+    if debug_mod_is_eanable:
+        for r in plat_collision:
+            pygame.draw.rect(ecran, (255, 0, 0), (r.x - xcam, r.y - ycam, r.width, r.height), 2)
+    
+    joueur1.draw(xcam, ycam, resolution, resolution_base)
+    for i in items:
+        i.draw(xcam, ycam, resolution, resolution_base)
+    ecran.blit(icon_money, (20, 20))
+    ecran.blit(icon_dash, (20, 150))
+    if joueur1.dash_couldown>0:
+        ecran.blit(icon_interdiction, (15,144))
+    
+def touch_items():
+    for i in items:
+        if joueur1.collide_items(i.return_rect()):
+            if i.type == "cash_bag":
+                joueur1.money+=i.quantity
+                items_recovered.append(i.ID)
+                items.remove(i)
 
 
-charge_zone()
-joueur1 = joueur(500, 500, ecran)
+charge_zone(zone, couche)
+joueur1 = joueur(500, 500, ecran, debug_mod_is_eanable)
 frame_count = 0
 # --- Boucle principale ---
 while execution:
 # Fermeture fenêtre 
     for i in pygame.event.get():
-        if i.type == pygame.QUIT: 
+        if i.type == pygame.QUIT:
             execution = False  
         if i.type == pygame.KEYDOWN:
             if i.key == pygame.K_ESCAPE:
@@ -89,19 +162,12 @@ while execution:
         
 # collision et mouvement
 
-#FIXME debuger le changement de zones pour ne pas e coincer
         joueur1.mouvementy(plat_collision)
     joueur1.mouvementx(plat_collision)
-    if joueur1.x < 0:
-        zone -= 1
-        joueur1.x = 6400 - joueur1.l
-        xcam = 6400 - resolution[0]
-        charge_zone()
-    elif joueur1.x + joueur1.l > 6400:
-        zone += 1
-        joueur1.x = 0
-        xcam = 0
-        charge_zone()
+    touch_items()
+
+    xcam, ycam, zone, couche=changement_zone(xcam, ycam, zone, couche)
+        
 
 # couldown des capacités
     if joueur1.dash_couldown > 0:
@@ -114,24 +180,11 @@ while execution:
     cible_cam_y = max(0, min(6400 - resolution[1], cible_cam_y))
     xcam += (cible_cam_x - xcam) * 0.05
     ycam += (cible_cam_y - ycam) * 0.05
-
     group.center((xcam + resolution[0]//2, ycam + resolution[1]//2))
 
-    if keys[pygame.K_1]:
-        resolution = (130 * 16, 130 * 9)
-        ecran = pygame.display.set_mode(resolution)
-    if keys[pygame.K_2]:
-        resolution = (2560, 1440)
-        ecran = pygame.display.set_mode(resolution)
 # Affichage
-    ecran.fill(fond_ecran)
-    group.draw(ecran)
-    #debug affichage hitbox des plateformes
-    # for r in plat_collision:
-    #    pygame.draw.rect(ecran, (255, 0, 0), (r.x - xcam, r.y - ycam, r.width, r.height), 2)
     
-    joueur1.draw(xcam, ycam, resolution, resolution_base)
-    ecran.blit(img, (20, 20))
+    draw()
    
 # rafraîchissement de l'écran
 
