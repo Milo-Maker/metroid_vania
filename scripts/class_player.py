@@ -15,6 +15,8 @@ class joueur(pygame.sprite.Sprite):
         self.dash_force = 50
         self.dash_couldown = 0
         self.dash_couldown_max = 80
+        if debug_mod:
+            self.dash_couldown_max = 20
         self.last_y = y
         self.l = 89
         self.h = 163
@@ -36,7 +38,11 @@ class joueur(pygame.sprite.Sprite):
             self.animation_dash.append(pygame.transform.scale(pygame.image.load(self.PATH + f"/Dash/{i}.png").convert_alpha(), (300,300)))  
 
         self.debug_mod_is_eanable = debug_mod  
-        self.money = 0  
+        self.money = 0 
+        self.vie=100
+        self.vie_max=100
+        self.mana=100
+        self.mana_max=100
     
     def draw(self, xcam, ycam, resolution, resolution_base):
 
@@ -49,49 +55,52 @@ class joueur(pygame.sprite.Sprite):
             self.animation_counter = 0  
         if self.animation_etat == 3 and self.animation_counter > len(self.animation_dash) - 1:
             self.animation_counter = 0
-        scale_x = resolution[0]/resolution_base[0]
-        scale_y = resolution[1]/resolution_base[1]
-        screen_x = (self.x - xcam) * scale_x
-        screen_y = (self.y - ycam) * scale_y
         
-        #debug affichage hitbox
+        scale = resolution[0] / resolution_base[0]
+        screen_x = (self.x - xcam) * scale
+        screen_y = (self.y - ycam) * scale
+        
+        # Redimensionner les sprites avec le scale
+        sprite_width = int(300 * scale)
+        sprite_height = int(300 * scale)
+        offset_x = int(105 * scale)
+        offset_y = int(72 * scale)
+        
+        # Debug affichage hitbox
         if self.debug_mod_is_eanable:
-            screen_l, screen_h = self.l * scale_x, self.h * scale_y
+            screen_l, screen_h = self.l * scale, self.h * scale
             pygame.draw.rect(self.screen, (0, 0, 255), (screen_x, screen_y, screen_l, screen_h), 2)
 
+        # Obtenir le sprite approprié
+        if self.animation_etat == 0:
+            sprite = self.animation_idle[self.animation_counter]
+        elif self.animation_etat == 1:
+            sprite = self.animation_walk[self.animation_counter]
+        elif self.animation_etat == 2:
+            sprite = self.animation_jump[self.animation_counter]
+        elif self.animation_etat == 3:
+            sprite = self.animation_dash[self.animation_counter]
+        
+        # Redimensionner le sprite selon la résolution
+        scaled_sprite = pygame.transform.scale(sprite, (sprite_width, sprite_height))
+        
+        # Appliquer le flip si nécessaire
         if self.direction == -1:
-            if self.animation_etat == 0:
-                self.screen.blit(pygame.transform.flip(self.animation_idle[self.animation_counter], True, False), (screen_x - 105, screen_y - 72))
-            elif self.animation_etat == 1:
-                self.screen.blit(pygame.transform.flip(self.animation_walk[self.animation_counter], True, False), (screen_x - 105, screen_y - 72))
-            elif self.animation_etat == 2:
-                self.screen.blit(pygame.transform.flip(self.animation_jump[self.animation_counter], True, False), (screen_x - 105, screen_y - 72))
-            elif self.animation_etat == 3:
-                self.screen.blit(pygame.transform.flip(self.animation_dash[self.animation_counter], True, False), (screen_x - 105, screen_y - 72))
-            
-        else:
-            if self.animation_etat == 0:
-                self.screen.blit(self.animation_idle[self.animation_counter], (screen_x - 105, screen_y - 72))
-            elif self.animation_etat == 1:
-                self.screen.blit(self.animation_walk[self.animation_counter], (screen_x - 105, screen_y - 72))
-            elif self.animation_etat == 2:
-                self.screen.blit(self.animation_jump[self.animation_counter], (screen_x - 105, screen_y - 72))
-            elif self.animation_etat == 3:
-                self.screen.blit(self.animation_dash[self.animation_counter], (screen_x - 105, screen_y - 72))
+            scaled_sprite = pygame.transform.flip(scaled_sprite, True, False)
+        
+        # Afficher le sprite
+        self.screen.blit(scaled_sprite, (screen_x - offset_x, screen_y - offset_y))
             
     def collision_wall(self, rect_objet):
         rect_joueur = pygame.Rect(self.x, self.y, self.l, self.h)
         if rect_joueur.colliderect(rect_objet):
             return True
         return False
-
     def collide_items(self, rect_obj):
         rect_joueur = pygame.Rect(self.x, self.y, self.l, self.h)
         if rect_joueur.colliderect(rect_obj):
             return True
-        return False
-
-    
+        return False   
     def mouvementy(self, plat_collision):
         for _ in range(abs(math.ceil(self.vy))):
             if self.vy > 0:  # Descente
@@ -109,8 +118,7 @@ class joueur(pygame.sprite.Sprite):
                     if self.collision_wall(i):
                         self.y += 1
                         self.vy = 0
-                        break
-    
+                        break    
     def mouvementx(self, plat_collision):    
         for _ in range(abs(math.ceil(self.vx))):
             if self.vx > 0:  # Droite
