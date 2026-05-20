@@ -1,6 +1,6 @@
 import pygame
 
-class barre:
+class barre():
     def __init__(self, x, y, largeur, hauteur, couleur_fond, couleur_barre, avec_bordure=True, avec_brillance=True, avec_texte=True):
         self.x = x
         self.y = y

@@ -8,6 +8,8 @@ from scripts.class_collectible import collectible
 from scripts.class_bouton import bouton
 from scripts.class_ennemi import ennemi 
 from scripts.class_barre import barre
+from scripts.class_particule import systemeParticules
+from scripts.class_projectile_magie import projectile_magie
 pygame.init()
 debug_mod_is_eanable=False
 
@@ -44,14 +46,18 @@ couche = 1
 zone = 2
 xcam = 0
 ycam = 0
+ecran_x = 0 #position du joueur a l'écran
+ecran_y = 0
 gravité = 1
 joueur1 = joueur(500, 500, ecran, debug_mod_is_eanable)
-        
+systeme_particules = systemeParticules()
+
 group = None
 plat_collision = []
 items = []
 items_recovered= []
 ennemis = [] 
+proj_magie = []
 
 map_surface = None
 font = pygame.font.SysFont("comicsans",40)
@@ -64,6 +70,7 @@ class graphisme_map:
         self.width = self.tmx_data.width * self.tmx_data.tilewidth
         self.height = self.tmx_data.height * self.tmx_data.tileheight
         
+
     def render(self, surface):
         # Parcourir toutes les couches
         for layer in self.tmx_data.visible_layers:
@@ -187,6 +194,7 @@ def changement_zone(xcam, ycam, zone, couche):
     return xcam, ycam, zone, couche
 
 def draw():
+    global ecran_x, ecran_y
     scale = resolution[0] / resolution_base[0]
     # Map
     ecran.fill(fond_ecran)
@@ -203,16 +211,17 @@ def draw():
                 int(r.height * scale)
             )
             pygame.draw.rect(ecran, (255, 0, 0), screen_rect, 2)
-    
+    systeme_particules.draw(ecran, xcam, ycam)
     # Joueur
-    joueur1.draw(xcam, ycam, resolution, resolution_base)
-    # Ennemis
-    for e in ennemis:
-        e.draw(xcam, ycam, resolution, resolution_base)
-    # Items
-    for i in items:
-        i.draw(xcam, ycam, resolution, resolution_base)
-    
+    ecran_x,ecran_y=joueur1.draw(xcam, ycam, resolution, resolution_base)   
+    # Ennemis   
+    for e in ennemis:   
+        e.draw(xcam, ycam, resolution, resolution_base) 
+    # Items 
+    for i in items: 
+        i.draw(xcam, ycam, resolution, resolution_base) 
+    for i in proj_magie:
+        i.draw()
     # Barres de vie et mana
     scale = resolution[0] / resolution_base[0]
     barre_vie.draw(ecran, joueur1.vie, joueur1.vie_max, f"HP: {int(joueur1.vie)}/{int(joueur1.vie_max)}", scale)
@@ -228,7 +237,8 @@ def draw():
     # Dash icon
     ecran.blit(icon_dash, (int(20 * scale), int(220 * scale)))
     if joueur1.dash_couldown > 0:
-        ecran.blit(icon_interdiction, (int(15 * scale), int(214 * scale)))  
+        ecran.blit(icon_interdiction, (int(15 * scale), int(214 * scale)))
+      
 def touch_items():
     for i in items:
         if joueur1.collide_items(i.return_rect()):
@@ -705,13 +715,7 @@ def menu():
     boutons_visible = False
     
     # Étoiles pour le fond
-    etoiles = []
-    for i in range(100):
-        x = (i * 123) % resolution[0]
-        y = (i * 456) % resolution[1]
-        size = (i % 3) + 1
-        vitesse = (i % 3) + 0.5
-        etoiles.append([x, y, size, vitesse])
+    systeme_particules.creer_etoiles_menu(resolution[0], resolution[1])
     
     in_menu = True
     while in_menu:
@@ -731,6 +735,7 @@ def menu():
                     return "quit"
                 if event.key == pygame.K_SPACE and boutons_visible:
                     in_menu = False
+                    systeme_particules.clear()
                     return "play"
             
             # Vérifier les clics sur les boutons (seulement si visibles)
@@ -738,6 +743,7 @@ def menu():
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if bouton_jouer.rect.collidepoint(event.pos):
                         in_menu = False
+                        systeme_particules.clear()
                         return "play"
                     
                     if bouton_options.rect.collidepoint(event.pos):
@@ -790,11 +796,8 @@ def menu():
             alpha = min(255, alpha + 3)
         
         # Animation des étoiles
-        for etoile in etoiles:
-            etoile[1] += etoile[3]  # Déplacement vertical
-            if etoile[1] > resolution[1]:
-                etoile[1] = 0
-                etoile[0] = (etoile[0] + 50) % resolution[0]
+        systeme_particules.update(resolution[0], resolution[1])
+        
         
         # === AFFICHAGE ===
         
@@ -808,11 +811,8 @@ def menu():
             pygame.draw.line(ecran, couleur, (0, i), (resolution[0], i))
         
         # Dessiner les étoiles
-        for etoile in etoiles:
-            brightness = int(150 + 105 * ((etoile[1] / resolution[1])))
-            blue = min(255, brightness + 50)
-            pygame.draw.circle(ecran, (brightness, brightness, blue), (int(etoile[0]), int(etoile[1])), etoile[2],)
-        
+        systeme_particules.draw(ecran)
+
         # Titre du jeu avec effet d'ombre
         font_titre = pygame.font.Font(None, 120)
         
@@ -859,7 +859,8 @@ def menu():
         
         pygame.display.flip()
         clock.tick(60)
-    
+
+    systeme_particules.clear()
     return "play"
 
 
@@ -889,6 +890,9 @@ def main():
                         result = menu()
                         if result == "quit":
                             execution = False
+            if i.type == pygame.MOUSEBUTTONDOWN and i.button == 1:
+                proj_magie.append(projectile_magie(ecran_x,ecran_y, joueur1.sort_act, 10, ecran))
+           
 
     # Inputs
         keys = pygame.key.get_pressed()
@@ -897,6 +901,9 @@ def main():
         if abs(joueur1.vx) > joueur1.vitesse: # Si en dash
             joueur1.vx *= 0.9  # Diminution progressive de la vitesse du dash
             joueur1.états = 3
+            systeme_particules.creer_trainee_dash(joueur1.x + joueur1.l//2, 
+                                      joueur1.y + joueur1.h//2, 
+                                      joueur1.direction)
         else:
             joueur1.vx = 0
             if joueur1.états == 1:
@@ -920,9 +927,13 @@ def main():
                 joueur1.vx = joueur1.dash_force * joueur1.direction
                 joueur1.dash_couldown = joueur1.dash_couldown_max
                 joueur1.vy = 0  # Annule la vitesse verticale lors du dash
+              
                 joueur1.animation_etat = 3
                 joueur1.états = 3
                 joueur1.animation_counter = 0
+                systeme_particules.creer_trainee_dash(joueur1.x + joueur1.l//2, 
+                                      joueur1.y + joueur1.h//2, 
+                                      joueur1.direction)
             
             if joueur1.états == 2:
             #and joueur1.animation_etat != 3:
@@ -933,6 +944,7 @@ def main():
                 joueur1.états = 2
 
     # Appliquer la gravité 
+            
             joueur1.vy += gravité
             
     # collision et mouvement
@@ -963,7 +975,9 @@ def main():
     
     
     # rafraîchissement de l'écran
-
+        for i in proj_magie:
+            i.update()
+        systeme_particules.update()
         if joueur1.animation_etat == 2:  # Si en l'air
             if frame_count % 4 == 0:  # Change d'image une frame sur trois
                 joueur1.animation_counter += 1
@@ -975,6 +989,8 @@ def main():
     # Affichage
         
         draw()
+        
+        
         pygame.display.flip()
         clock.tick(60)
     

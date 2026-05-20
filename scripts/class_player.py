@@ -43,6 +43,7 @@ class joueur(pygame.sprite.Sprite):
         self.vie_max=100
         self.mana=100
         self.mana_max=100
+        self.sort_act = 1
     
     def draw(self, xcam, ycam, resolution, resolution_base):
 
@@ -90,6 +91,7 @@ class joueur(pygame.sprite.Sprite):
         
         # Afficher le sprite
         self.screen.blit(scaled_sprite, (screen_x - offset_x, screen_y - offset_y))
+        return screen_x, screen_y
             
     def collision_wall(self, rect_objet):
         rect_joueur = pygame.Rect(self.x, self.y, self.l, self.h)

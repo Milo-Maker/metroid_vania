@@ -83,8 +83,11 @@ class ennemi(pygame.sprite.Sprite):
             self.animation_counter = 0
         
     
-    def collision_wall(self, rect_objet):
-        rect_ennemi = pygame.Rect(self.x, self.y, self.l, self.h)
+    def collision_wall(self, rect_objet, get_fall=False):
+        if get_fall:
+            rect_ennemi = pygame.Rect(self.x+self.l*self.direction, self.y + 1, self.l, self.h)
+        else :
+            rect_ennemi = pygame.Rect(self.x, self.y, self.l, self.h)
         return rect_ennemi.colliderect(rect_objet)
     
     def mouvementx(self, plat_collision):
@@ -93,18 +96,40 @@ class ennemi(pygame.sprite.Sprite):
             if self.vx > 0:
                 self.x += 1
                 for i in plat_collision:
+                    
                     if self.collision_wall(i):
+                        print("collision droite")
                         self.x -= 1
                         self.direction = -1  # Change de direction
                         break
+                    if self.direction == -1:
+                        break  # Sort de la boucle si la direction a changé
+                        
+
             elif self.vx < 0:
                 self.x -= 1
                 for i in plat_collision:
                     if self.collision_wall(i):
+                        print("collision gauche")
                         self.x += 1
                         self.direction = 1
                         break
-    
+                    
+                        
+                if self.direction == 1:
+                    break  # Sort de la boucle si la direction a changé
+        
+        # Vérifie si le sol est présent devant l'ennemi
+        a=False
+        for i in plat_collision:
+            if self.collision_wall(i, get_fall=True):
+                a=True
+                break
+        
+        if not a:
+            self.direction *= -1  # Change de direction s'il n'y a pas de sol
+                
+        
     def mouvementy(self, plat_collision):
         # Pareil que le joueur
         for _ in range(abs(math.ceil(self.vy))):
