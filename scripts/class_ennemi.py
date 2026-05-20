@@ -33,6 +33,7 @@ class ennemi(pygame.sprite.Sprite):
         
         # Charger les animations selon le type
         self.charger_animations()
+        self.hit_timer = 0
                 
     def charger_animations(self):
         """Charge les sprites selon le type d'ennemi"""
@@ -45,6 +46,20 @@ class ennemi(pygame.sprite.Sprite):
         screen_x = (self.x - xcam) * scale
         screen_y = (self.y - ycam) * scale
         
+        # Décrémenter le hit timer
+        if self.hit_timer > 0:
+            self.hit_timer -= 1
+            
+        # Clignotement si touché (1 frame sur 3 masquée)
+        if self.hit_timer > 0 and (self.hit_timer // 3) % 2 == 0:
+            # Dessiner seulement la barre de vie
+            barre_x = screen_x - 10
+            barre_y = screen_y - 25
+            self.barre_vie.x = barre_x
+            self.barre_vie.y = barre_y
+            self.barre_vie.draw(self.screen, self.vie, self.vie_max, "", scale)
+            return
+
         # Debug hitbox
         if self.debug_mod:
             rect_w = int(self.l * scale)
@@ -151,6 +166,7 @@ class ennemi(pygame.sprite.Sprite):
     def prendre_degats(self, degats):
         """Réduit la vie de l'ennemi"""
         self.vie -= degats
+        self.hit_timer = 15  # Active le clignotement pour 15 frames
         if self.vie <= 0:
             return True  # Ennemi mort
         return False

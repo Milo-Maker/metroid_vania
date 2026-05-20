@@ -60,6 +60,8 @@ ennemis = []
 proj_magie = []
 
 map_surface = None
+map_width = 6400
+map_height = 6400
 font = pygame.font.SysFont("comicsans",40)
 col_bouton= (0,200,0)
 
@@ -134,9 +136,11 @@ def changer_resolution(nouvelle_resolution):
         
 
 def charge_zone(zone, couche):
-    global group, plat_collision, map_surface, items, ennemis
+    global group, plat_collision, map_surface, items, ennemis, map_width, map_height
     tiled_map = graphisme_map(f"map/couche{couche}/zone{zone}.tmx", scale=resolution[0]/resolution_base[0])
     map_surface = tiled_map.make_map()
+    map_width = tiled_map.width
+    map_height = tiled_map.height
 
     tmx_data = pytmx.load_pygame(f"map/couche{couche}/zone{zone}.tmx")
     #map_data = pyscroll.data.TiledMapData(tmx_data)
@@ -178,14 +182,14 @@ def charge_zone(zone, couche):
             if obj.name == "slime_1":
                 ennemis.append(ennemi(obj.name, obj.x, obj.y, ecran, debug_mod_is_eanable))
 def changement_zone(xcam, ycam, zone, couche):
+    global map_width
     if joueur1.x < 0:
         zone -= 1
-        joueur1.x = 6400 - joueur1.l
-        xcam = 6400 - resolution[0]
         charge_zone(zone, couche)
+        joueur1.x = map_width - joueur1.l
+        xcam = map_width - resolution[0]
         
-                
-    elif joueur1.x + joueur1.l > 6400:
+    elif joueur1.x + joueur1.l > map_width:
         zone += 1
         joueur1.x = 0
         xcam = 0
@@ -221,7 +225,7 @@ def draw():
     for i in items: 
         i.draw(xcam, ycam, resolution, resolution_base) 
     for i in proj_magie:
-        i.draw()
+        i.draw(xcam, ycam, scale)
     # Barres de vie et mana
     scale = resolution[0] / resolution_base[0]
     barre_vie.draw(ecran, joueur1.vie, joueur1.vie_max, f"HP: {int(joueur1.vie)}/{int(joueur1.vie_max)}", scale)
@@ -891,7 +895,17 @@ def main():
                         if result == "quit":
                             execution = False
             if i.type == pygame.MOUSEBUTTONDOWN and i.button == 1:
-                proj_magie.append(projectile_magie(ecran_x,ecran_y, joueur1.sort_act, 10, ecran))
+                scale = resolution[0] / resolution_base[0]
+                proj_magie.append(projectile_magie(
+                    joueur1.x + joueur1.l // 2, 
+                    joueur1.y + joueur1.h // 2, 
+                    joueur1.sort_act, 
+                    10, 
+                    ecran, 
+                    xcam, 
+                    ycam, 
+                    scale
+                ))
            
 
     # Inputs
@@ -959,16 +973,76 @@ def main():
     # couldown des capacités
         if joueur1.dash_couldown > 0:
             joueur1.dash_couldown -= 1
+            
+        if joueur1.invincibilite > 0:
+            joueur1.invincibilite -= 1
 
     # ennemis :
-        for e in ennemis:
+        for e in ennemis[:]:
             e.update(plat_collision)
+            
+        # Collision joueur / ennemis (dégâts, sang, i-frames et recul)
+        if joueur1.invincibilite <= 0:
+            joueur_rect = pygame.Rect(joueur1.x, joueur1.y, joueur1.l, joueur1.h)
+            for e in ennemis:
+                ennemi_rect = pygame.Rect(e.x, e.y, e.l, e.h)
+                if joueur_rect.colliderect(ennemi_rect):
+                    # Particules de sang rouge au point d'impact
+                    systeme_particules.creer_explosion(joueur1.x + joueur1.l // 2, joueur1.y + joueur1.h // 2, 15, (255, 50, 50))
+                    joueur1.recevoir_degats(e.degats)
+                    
+                    # Recul (knockback)
+                    if joueur1.x + joueur1.l / 2 < e.x + e.l / 2:
+                        joueur1.vx = -12
+                    else:
+                        joueur1.vx = 12
+                    joueur1.vy = -10
+                    break
+
+        # Collision projectiles magiques / ennemis
+        for proj in proj_magie[:]:
+            proj_rect = proj.get_rect()
+            # Suppression si hors-limites
+            if proj.pos.x < 0 or proj.pos.x > 6400 or proj.pos.y < 0 or proj.pos.y > 6400:
+                if proj in proj_magie:
+                    proj_magie.remove(proj)
+                continue
+                
+            for e in ennemis[:]:
+                ennemi_rect = pygame.Rect(e.x, e.y, e.l, e.h)
+                if proj_rect.colliderect(ennemi_rect):
+                    # Particules magiques violettes
+                    systeme_particules.creer_explosion(proj.pos.x, proj.pos.y, 10, (150, 50, 175))
+                    
+                    # Infliger les dégâts
+                    mort = e.prendre_degats(proj.degats)
+                    
+                    # Léger recul de l'ennemi
+                    push_dir = 1 if proj.mouvement.x > 0 else -1
+                    e.direction = -push_dir
+                    e.x += push_dir * 15
+                    
+                    if proj in proj_magie:
+                        proj_magie.remove(proj)
+                    
+                    if mort:
+                        # Explosion de mort verte
+                        systeme_particules.creer_explosion(e.x + e.l // 2, e.y + e.h // 2, 25, (50, 200, 50))
+                        
+                        # Faire spawner un sac de pièces au sol
+                        import random
+                        temp_id = random.randint(-100000, -1000)
+                        items.append(collectible("cash_bag", e.x + e.l // 2, e.y + e.h // 2, cash_bag, ecran, temp_id, random.randint(5, 15), debug_mod_is_eanable))
+                        
+                        if e in ennemis:
+                            ennemis.remove(e)
+                    break
         
     # Caméra
         cible_cam_x = joueur1.x + joueur1.l/2 - resolution_base[0]/2
         cible_cam_y = joueur1.y + joueur1.h/2 - resolution_base[1]/2
-        cible_cam_x = max(0, min(6400 - resolution_base[0], cible_cam_x))
-        cible_cam_y = max(0, min(6400 - resolution_base[1], cible_cam_y))
+        cible_cam_x = max(0, min(map_width - resolution_base[0], cible_cam_x))
+        cible_cam_y = max(0, min(map_height - resolution_base[1], cible_cam_y))
         xcam += (cible_cam_x - xcam) * 0.05
         ycam += (cible_cam_y - ycam) * 0.05
 

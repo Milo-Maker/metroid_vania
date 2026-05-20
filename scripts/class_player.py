@@ -44,9 +44,24 @@ class joueur(pygame.sprite.Sprite):
         self.mana=100
         self.mana_max=100
         self.sort_act = 1
+        self.invincibilite = 0
+    
+    def recevoir_degats(self, degats):
+        """Réduit la vie du joueur et active l'invincibilité si non invincible"""
+        if self.invincibilite <= 0:
+            self.vie = max(0, self.vie - degats)
+            self.invincibilite = 60  # 1 seconde à 60 FPS
+            return True
+        return False
     
     def draw(self, xcam, ycam, resolution, resolution_base):
+        scale = resolution[0] / resolution_base[0]
+        screen_x = (self.x - xcam) * scale
+        screen_y = (self.y - ycam) * scale
 
+        # Effet de clignotement rétro si invincible
+        if self.invincibilite > 0 and (self.invincibilite // 4) % 2 == 0:
+            return screen_x, screen_y
 
         if self.animation_etat == 0 and self.animation_counter > len(self.animation_idle) - 1:  
             self.animation_counter = 0
@@ -56,10 +71,6 @@ class joueur(pygame.sprite.Sprite):
             self.animation_counter = 0  
         if self.animation_etat == 3 and self.animation_counter > len(self.animation_dash) - 1:
             self.animation_counter = 0
-        
-        scale = resolution[0] / resolution_base[0]
-        screen_x = (self.x - xcam) * scale
-        screen_y = (self.y - ycam) * scale
         
         # Redimensionner les sprites avec le scale
         sprite_width = int(300 * scale)

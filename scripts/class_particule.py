@@ -67,7 +67,7 @@ class systemeParticules():
             taille = random.uniform(2, 6)
             duree = random.randint(20, 50)
             
-            self.particules.append(particule(x, y, vx, vy, couleur, taille,  duree))
+            self.particules.append(particule(x, y, vx, vy, couleur, taille, "explosion", duree))
     
     def creer_trainee_dash(self, x, y, direction, couleur=(100, 200, 255)):
         """Crée une traînée de particules"""
